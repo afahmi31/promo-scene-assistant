@@ -67,7 +67,7 @@ export default function SettingsView({
 
   return (
     <div id="settings-view" className="max-w-3xl space-y-8 animate-fade-in pb-16">
-      
+
       {/* Settings Header banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -87,7 +87,7 @@ export default function SettingsView({
       </div>
 
       <div className="space-y-6">
-        
+
         {/* Core AI API Services parameters */}
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs space-y-4">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono border-b border-slate-100 pb-2">

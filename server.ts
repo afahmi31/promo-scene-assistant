@@ -32,6 +32,78 @@ function checkGeminiClient() {
   }
 }
 
+function extractFirstJsonBlock(rawText: string): string {
+  const trimmed = rawText.trim();
+  if (!trimmed) {
+    return "{}";
+  }
+
+  const codeFenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  const candidate = codeFenceMatch?.[1]?.trim() || trimmed;
+  const startIndex = candidate.search(/[\[{]/);
+
+  if (startIndex === -1) {
+    throw new Error("Model response did not contain a JSON object.");
+  }
+
+  const openingChar = candidate[startIndex];
+  const closingChar = openingChar === "[" ? "]" : "}";
+  let depth = 0;
+  let inString = false;
+  let isEscaped = false;
+
+  for (let index = startIndex; index < candidate.length; index += 1) {
+    const char = candidate[index];
+
+    if (inString) {
+      if (isEscaped) {
+        isEscaped = false;
+        continue;
+      }
+
+      if (char === "\\") {
+        isEscaped = true;
+        continue;
+      }
+
+      if (char === "\"") {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === "\"") {
+      inString = true;
+      continue;
+    }
+
+    if (char === openingChar) {
+      depth += 1;
+      continue;
+    }
+
+    if (char === closingChar) {
+      depth -= 1;
+      if (depth === 0) {
+        return candidate.slice(startIndex, index + 1);
+      }
+    }
+  }
+
+  throw new Error("Model response contained an incomplete JSON block.");
+}
+
+function parseModelJson(rawText: string) {
+  const trimmed = rawText.trim();
+
+  try {
+    return JSON.parse(trimmed);
+  } catch (_) {
+    const extracted = extractFirstJsonBlock(trimmed);
+    return JSON.parse(extracted);
+  }
+}
+
 // 1. generateScenePlan
 app.post("/api/generate-scene-plan", async (req, res) => {
   try {
@@ -121,7 +193,7 @@ DO NOT wrap your JSON in HTML markdown blocks like \`\`\`json. Return STRICT, pa
     });
 
     const text = response.text?.trim() || "{}";
-    res.json(JSON.parse(text));
+    res.json(parseModelJson(text));
   } catch (error: any) {
     console.error("Generate Scene Plan Error:", error);
     res.status(500).json({ error: error.message || "Failed to generate scene plan" });
@@ -212,7 +284,7 @@ DO NOT wrap your JSON in HTML markdown blocks. Return STRICT parses-as-straight 
     });
 
     const text = response.text?.trim() || "{}";
-    res.json(JSON.parse(text));
+    res.json(parseModelJson(text));
   } catch (error: any) {
     console.error("Generate Scene Output Error:", error);
     res.status(500).json({ error: error.message || "Failed to generate scene output" });
@@ -253,7 +325,7 @@ Strict parser-ready JSON only. no markdown codeblock.`;
       },
     });
 
-    res.json(JSON.parse(response.text?.trim() || "{}"));
+    res.json(parseModelJson(response.text?.trim() || "{}"));
   } catch (error: any) {
     console.error("Background Suggestion Error:", error);
     res.status(500).json({ error: error.message || "Failed to suggest background" });

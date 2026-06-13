@@ -29,8 +29,13 @@ import SceneBuilderView from "./components/SceneBuilderView";
 import CampaignAssetsView from "./components/CampaignAssetsView";
 import PromptTemplatesView from "./components/PromptTemplatesView";
 import SettingsView from "./components/SettingsView";
+import { buildPersistentMediaRef, deletePersistentMedia, hydrateEntityMedia, sanitizeEntityMedia } from "./lib/persistentMedia";
 
 export default function App() {
+  const CAMPAIGN_MEDIA_FIELDS: Array<keyof Campaign> = ["productImage", "backgroundReferenceImage", "modelReferenceImage"];
+  const SCENE_MEDIA_FIELDS: Array<keyof Scene> = ["sceneBackgroundImage"];
+  const ASSET_MEDIA_FIELDS: Array<keyof Asset> = ["fileData"];
+
   // Navigation State
   const [activeView, setActiveView] = useState<"dashboard" | "new_campaign" | "scene_builder" | "assets" | "templates" | "settings">("dashboard");
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
@@ -46,40 +51,100 @@ export default function App() {
   const [templatePrefill, setTemplatePrefill] = useState<Partial<Campaign> | undefined>(undefined);
   const [campaignSetupScenesPrefill, setCampaignSetupScenesPrefill] = useState<Scene[] | undefined>(undefined);
 
+  const hydrateCampaigns = (items: Campaign[]) => {
+    return Promise.all(items.map((campaign) => hydrateEntityMedia(campaign, CAMPAIGN_MEDIA_FIELDS)));
+  };
+
+  const hydrateScenes = (items: Scene[]) => {
+    return Promise.all(items.map((scene) => hydrateEntityMedia(scene, SCENE_MEDIA_FIELDS)));
+  };
+
+  const hydrateAssets = (items: Asset[]) => {
+    return Promise.all(items.map((asset) => hydrateEntityMedia(asset, ASSET_MEDIA_FIELDS)));
+  };
+
+  const persistCampaigns = async (items: Campaign[]) => {
+    const sanitized = await Promise.all(
+      items.map((campaign) => sanitizeEntityMedia(campaign, "campaign", campaign.id, CAMPAIGN_MEDIA_FIELDS))
+    );
+    localStorage.setItem("warna_fit_campaigns", JSON.stringify(sanitized));
+  };
+
+  const persistScenes = async (items: Scene[]) => {
+    const sanitized = await Promise.all(
+      items.map((scene) => sanitizeEntityMedia(scene, "scene", scene.id, SCENE_MEDIA_FIELDS))
+    );
+    localStorage.setItem("warna_fit_scenes", JSON.stringify(sanitized));
+  };
+
+  const persistAssets = async (items: Asset[]) => {
+    const sanitized = await Promise.all(
+      items.map((asset) => sanitizeEntityMedia(asset, "asset", asset.id, ASSET_MEDIA_FIELDS))
+    );
+    localStorage.setItem("warna_fit_assets", JSON.stringify(sanitized));
+  };
+
+  const cleanupCampaignMedia = async (campaignId: string) => {
+    await Promise.all(
+      CAMPAIGN_MEDIA_FIELDS.map((fieldName) =>
+        deletePersistentMedia(buildPersistentMediaRef("campaign", campaignId, fieldName))
+      )
+    );
+  };
+
+  const cleanupSceneMedia = async (sceneId: string) => {
+    await Promise.all(
+      SCENE_MEDIA_FIELDS.map((fieldName) =>
+        deletePersistentMedia(buildPersistentMediaRef("scene", sceneId, fieldName))
+      )
+    );
+  };
+
+  const cleanupAssetMedia = async (assetId: string) => {
+    await Promise.all(
+      ASSET_MEDIA_FIELDS.map((fieldName) =>
+        deletePersistentMedia(buildPersistentMediaRef("asset", assetId, fieldName))
+      )
+    );
+  };
+
   // 1. Initial State Loading from LocalStorage with Pre-Seeded Sample Campaign
   useEffect(() => {
-    // a. Settings
-    const storedSettings = localStorage.getItem("warna_fit_settings");
-    if (storedSettings) {
-      try { setSettings(JSON.parse(storedSettings)); } catch(e){}
-    } else {
-      localStorage.setItem("warna_fit_settings", JSON.stringify(DEFAULT_SETTINGS));
-    }
+    let isMounted = true;
 
-    // b. Campaigns
-    const storedCampaigns = localStorage.getItem("warna_fit_campaigns");
-    let initialCampaigns: Campaign[] = [];
-    if (storedCampaigns) {
-      try { initialCampaigns = JSON.parse(storedCampaigns); } catch(e){}
-    }
+    const initializeState = async () => {
+      // a. Settings
+      const storedSettings = localStorage.getItem("warna_fit_settings");
+      if (storedSettings) {
+        try { setSettings(JSON.parse(storedSettings)); } catch(e){}
+      } else {
+        localStorage.setItem("warna_fit_settings", JSON.stringify(DEFAULT_SETTINGS));
+      }
 
-    // c. Scenes
-    const storedScenes = localStorage.getItem("warna_fit_scenes");
-    let initialScenes: Scene[] = [];
-    if (storedScenes) {
-      try { initialScenes = JSON.parse(storedScenes); } catch(e){}
-    }
+      // b. Campaigns
+      const storedCampaigns = localStorage.getItem("warna_fit_campaigns");
+      let initialCampaigns: Campaign[] = [];
+      if (storedCampaigns) {
+        try { initialCampaigns = JSON.parse(storedCampaigns); } catch(e){}
+      }
 
-    // d. Scene Outputs
-    const storedOutputs = localStorage.getItem("warna_fit_scene_outputs");
-    let initialOutputs: SceneOutput[] = [];
-    if (storedOutputs) {
-      try { initialOutputs = JSON.parse(storedOutputs); } catch(e){}
-    }
+      // c. Scenes
+      const storedScenes = localStorage.getItem("warna_fit_scenes");
+      let initialScenes: Scene[] = [];
+      if (storedScenes) {
+        try { initialScenes = JSON.parse(storedScenes); } catch(e){}
+      }
 
-    // e. Pre-Seed Database if completely empty
-    if (initialCampaigns.length === 0) {
-      const seedCampId = "camp_maxspeed_seed";
+      // d. Scene Outputs
+      const storedOutputs = localStorage.getItem("warna_fit_scene_outputs");
+      let initialOutputs: SceneOutput[] = [];
+      if (storedOutputs) {
+        try { initialOutputs = JSON.parse(storedOutputs); } catch(e){}
+      }
+
+      // e. Pre-Seed Database if completely empty
+      if (initialCampaigns.length === 0) {
+        const seedCampId = "camp_maxspeed_seed";
       
       const seedCampaign: Campaign = {
         id: seedCampId,
@@ -295,35 +360,64 @@ export default function App() {
         }
       ];
 
-      initialCampaigns = [seedCampaign];
-      initialScenes = seedScenes;
-      initialOutputs = seedOutputs;
+        initialCampaigns = [seedCampaign];
+        initialScenes = seedScenes;
+        initialOutputs = seedOutputs;
 
-      localStorage.setItem("warna_fit_campaigns", JSON.stringify(initialCampaigns));
-      localStorage.setItem("warna_fit_scenes", JSON.stringify(initialScenes));
-      localStorage.setItem("warna_fit_scene_outputs", JSON.stringify(initialOutputs));
-    }
+        localStorage.setItem("warna_fit_scene_outputs", JSON.stringify(initialOutputs));
+      }
 
-    setCampaigns(initialCampaigns);
-    setScenes(initialScenes);
-    setSceneOutputs(initialOutputs);
+      const [hydratedCampaigns, hydratedScenes] = await Promise.all([
+        hydrateCampaigns(initialCampaigns),
+        hydrateScenes(initialScenes)
+      ]);
 
-    // f. Assets
-    const storedAssets = localStorage.getItem("warna_fit_assets");
-    if (storedAssets) {
-      try { setAssets(JSON.parse(storedAssets)); } catch(e){}
-    }
+      // f. Assets
+      const storedAssets = localStorage.getItem("warna_fit_assets");
+      let initialAssets: Asset[] = [];
+      if (storedAssets) {
+        try { initialAssets = JSON.parse(storedAssets); } catch(e){}
+      }
+
+      const hydratedAssets = await hydrateAssets(initialAssets);
+      if (!isMounted) return;
+
+      setCampaigns(hydratedCampaigns);
+      setScenes(hydratedScenes);
+      setSceneOutputs(initialOutputs);
+      setAssets(hydratedAssets);
+
+      try {
+        await Promise.all([
+          persistCampaigns(hydratedCampaigns),
+          persistScenes(hydratedScenes),
+          persistAssets(hydratedAssets)
+        ]);
+      } catch (error) {
+        console.error("Failed to migrate media payloads into IndexedDB.", error);
+      }
+    };
+
+    void initializeState();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Persists collections to localStorage on mutations
   const updateStoredCampaigns = (updated: Campaign[]) => {
     setCampaigns(updated);
-    localStorage.setItem("warna_fit_campaigns", JSON.stringify(updated));
+    persistCampaigns(updated).catch((error) => {
+      console.error("Failed to persist campaigns.", error);
+    });
   };
 
   const updateStoredScenes = (updated: Scene[]) => {
     setScenes(updated);
-    localStorage.setItem("warna_fit_scenes", JSON.stringify(updated));
+    persistScenes(updated).catch((error) => {
+      console.error("Failed to persist scenes.", error);
+    });
   };
 
   const updateStoredOutputs = (updated: SceneOutput[]) => {
@@ -333,7 +427,9 @@ export default function App() {
 
   const updateStoredAssets = (updated: Asset[]) => {
     setAssets(updated);
-    localStorage.setItem("warna_fit_assets", JSON.stringify(updated));
+    persistAssets(updated).catch((error) => {
+      console.error("Failed to persist assets.", error);
+    });
   };
 
   const updateStoredSettings = (updated: SettingsType) => {
@@ -729,6 +825,8 @@ export default function App() {
 
     const filteredAssets = assets.filter(a => a.sceneId !== sceneId);
     updateStoredAssets(filteredAssets);
+    void cleanupSceneMedia(sceneId);
+    void Promise.all(assets.filter(a => a.sceneId === sceneId).map((asset) => cleanupAssetMedia(asset.id)));
 
     // Update campaign counts
     const updatedCamps = campaigns.map(c => {
@@ -882,6 +980,9 @@ ${outputObj?.editingRecommendation.map(r => `* ${r}`).join("\n") || "None propos
 
   const handleDeleteCampaign = (campaignId: string) => {
     if (confirm("Apakah anda yakin ingin menghapus campaign ini secara permanen beserta semua scenes dan asset?")) {
+      const removedScenes = scenes.filter(s => s.campaignId === campaignId);
+      const removedAssets = assets.filter(a => a.campaignId === campaignId);
+
       const filteredCamps = campaigns.filter(c => c.id !== campaignId);
       updateStoredCampaigns(filteredCamps);
 
@@ -893,6 +994,9 @@ ${outputObj?.editingRecommendation.map(r => `* ${r}`).join("\n") || "None propos
 
       const filteredAssets = assets.filter(a => a.campaignId !== campaignId);
       updateStoredAssets(filteredAssets);
+      void cleanupCampaignMedia(campaignId);
+      void Promise.all(removedScenes.map((scene) => cleanupSceneMedia(scene.id)));
+      void Promise.all(removedAssets.map((asset) => cleanupAssetMedia(asset.id)));
 
       if (activeCampaignId === campaignId) {
         setActiveCampaignId(null);
@@ -1090,6 +1194,7 @@ ${outputObj?.editingRecommendation.map(r => `* ${r}`).join("\n") || "None propos
               onDeleteAsset={(assetId) => {
                 const refreshed = assets.filter(a => a.id !== assetId);
                 updateStoredAssets(refreshed);
+                void cleanupAssetMedia(assetId);
               }}
             />
           )}
