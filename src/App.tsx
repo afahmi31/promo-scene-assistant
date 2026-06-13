@@ -44,6 +44,7 @@ export default function App() {
 
   // Template prefill bridge state
   const [templatePrefill, setTemplatePrefill] = useState<Partial<Campaign> | undefined>(undefined);
+  const [campaignSetupScenesPrefill, setCampaignSetupScenesPrefill] = useState<Scene[] | undefined>(undefined);
 
   // 1. Initial State Loading from LocalStorage with Pre-Seeded Sample Campaign
   useEffect(() => {
@@ -903,6 +904,20 @@ ${outputObj?.editingRecommendation.map(r => `* ${r}`).join("\n") || "None propos
   // Template select trigger
   const handleSelectTemplate = (template: Partial<Campaign>) => {
     setTemplatePrefill(template);
+    setCampaignSetupScenesPrefill(undefined);
+    setActiveView("new_campaign");
+  };
+
+  const handleResumeCampaignSetup = (campaignId: string) => {
+    const targetCampaign = campaigns.find((campaign) => campaign.id === campaignId);
+    if (!targetCampaign) return;
+
+    const relatedScenes = scenes
+      .filter((scene) => scene.campaignId === campaignId)
+      .sort((left, right) => left.order - right.order);
+
+    setTemplatePrefill(targetCampaign);
+    setCampaignSetupScenesPrefill(relatedScenes);
     setActiveView("new_campaign");
   };
 
@@ -1027,8 +1042,10 @@ ${outputObj?.editingRecommendation.map(r => `* ${r}`).join("\n") || "None propos
               scenes={scenes}
               onNavigateToNewCampaign={() => {
                 setTemplatePrefill(undefined);
+                setCampaignSetupScenesPrefill(undefined);
                 setActiveView("new_campaign");
               }}
+              onResumeCampaignSetup={handleResumeCampaignSetup}
               onNavigateToSceneBuilder={(campaignId) => {
                 setActiveCampaignId(campaignId);
                 setActiveView("scene_builder");
@@ -1041,6 +1058,7 @@ ${outputObj?.editingRecommendation.map(r => `* ${r}`).join("\n") || "None propos
           {activeView === "new_campaign" && (
             <NewCampaignView
               initialTemplate={templatePrefill}
+              initialScenes={campaignSetupScenesPrefill}
               onBackToDashboard={() => setActiveView("dashboard")}
               onGenerateScenePlan={handleGenerateAIScenePlan}
               onSaveCampaignPlan={handleSaveCampaignPlan}

@@ -1,15 +1,15 @@
 import React, { useState, useRef } from "react";
-import { 
-  ArrowLeft, 
-  ArrowRight, 
-  Sparkles, 
-  Upload, 
-  Trash2, 
-  Plus, 
-  Copy, 
-  ChevronUp, 
-  ChevronDown, 
-  Check, 
+import {
+  ArrowLeft,
+  ArrowRight,
+  Sparkles,
+  Upload,
+  Trash2,
+  Plus,
+  Copy,
+  ChevronUp,
+  ChevronDown,
+  Check,
   HelpCircle,
   Video,
   FileText,
@@ -24,14 +24,19 @@ interface NewCampaignViewProps {
   onGenerateScenePlan: (campaignData: Partial<Campaign>) => Promise<Scene[]>;
   onSaveCampaignPlan: (campaign: Campaign, scenes: Scene[]) => void;
   initialTemplate?: Partial<Campaign>;
+  initialScenes?: Scene[];
 }
 
 export default function NewCampaignView({
   onBackToDashboard,
   onGenerateScenePlan,
   onSaveCampaignPlan,
-  initialTemplate
+  initialTemplate,
+  initialScenes
 }: NewCampaignViewProps) {
+  const existingCampaign = initialTemplate?.id ? (initialTemplate as Campaign) : null;
+  const existingScenes = (initialScenes || []).map((scene) => ({ ...scene }));
+  const hasExistingScenePlan = existingScenes.length > 0;
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = useState<string>("");
@@ -70,12 +75,12 @@ export default function NewCampaignView({
 
   // Additional options
   const [narrationTone, setNarrationTone] = useState<string>(initialTemplate?.narrationTone || "Friendly");
-  const [language, setLanguage] = useState<string>("Indonesian");
+  const [language, setLanguage] = useState<string>(initialTemplate?.language || "Indonesian");
   const [ctaType, setCtaType] = useState<string>(initialTemplate?.ctaType || "Cek keranjang");
 
   // Step 3 state (The resulting generated scene plan)
-  const [generatedCampaign, setGeneratedCampaign] = useState<Campaign | null>(null);
-  const [tempScenes, setTempScenes] = useState<Scene[]>([]);
+  const [generatedCampaign, setGeneratedCampaign] = useState<Campaign | null>(existingCampaign);
+  const [tempScenes, setTempScenes] = useState<Scene[]>(existingScenes);
 
   // File Input Refs
   const productImageRef = useRef<HTMLInputElement>(null);
@@ -122,13 +127,11 @@ export default function NewCampaignView({
     }
   };
 
-  // Build temporary structured JSON trigger to backend
-  const handleTriggerAIScenePlanGeneration = async () => {
-    setIsLoading(true);
-    setErrorMessage(null);
-    setLoadingMessage("Membaca rincian produk...");
+  const buildCurrentCampaignDraft = (status: Campaign["status"] = "Scene Planned"): Campaign => {
+    const nowIso = new Date().toISOString();
 
-    const partialCamp: Partial<Campaign> = {
+    return {
+      id: existingCampaign?.id || "camp_" + Date.now(),
       title: campaignTitle,
       productName,
       productCategory,
@@ -155,8 +158,29 @@ export default function NewCampaignView({
       modelUsage,
       modelReferenceNotes,
       ctaType,
-      status: "Scene Planned"
+      totalAssets: existingCampaign?.totalAssets || 0,
+      totalGeneratedImages: existingCampaign?.totalGeneratedImages || 0,
+      totalGeneratedVoices: existingCampaign?.totalGeneratedVoices || 0,
+      status,
+      createdAt: existingCampaign?.createdAt || nowIso,
+      updatedAt: nowIso
     };
+  };
+
+  const handleReviewExistingScenePlan = () => {
+    if (!hasExistingScenePlan) return;
+    setErrorMessage(null);
+    setGeneratedCampaign(buildCurrentCampaignDraft("Scene Planned"));
+    setStep(3);
+  };
+
+  // Build temporary structured JSON trigger to backend
+  const handleTriggerAIScenePlanGeneration = async () => {
+    setIsLoading(true);
+    setErrorMessage(null);
+    setLoadingMessage("Membaca rincian produk...");
+
+    const partialCamp: Partial<Campaign> = buildCurrentCampaignDraft("Scene Planned");
 
     try {
       setTimeout(() => setLoadingMessage("Mengirim data ke Google Gemini 3.5..."), 1200);
@@ -164,50 +188,17 @@ export default function NewCampaignView({
       setTimeout(() => setLoadingMessage("Menyesuaikan durasi video format " + platform + "..."), 4500);
 
       const computedScenes = await onGenerateScenePlan(partialCamp);
-      
-      const newCampaign: Campaign = {
-        id: "camp_" + Date.now(),
-        title: campaignTitle,
-        productName,
-        productCategory,
-        productDescription,
-        productImage,
-        benefits,
-        keyPoints,
-        targetAudience,
-        problemSolved,
-        specialNotes,
-        platform,
-        totalDuration,
-        sceneCount,
-        aspectRatio,
-        visualPreset,
-        useBackgroundReference,
-        backgroundReferenceImage,
-        backgroundReferenceNotes,
-        narrationTone,
-        language,
-        useModelReference,
-        modelReferenceImage,
-        modelType,
-        modelUsage,
-        modelReferenceNotes,
-        ctaType,
-        totalAssets: 0,
-        totalGeneratedImages: 0,
-        totalGeneratedVoices: 0,
-        status: "Scene Planned",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+      const newCampaign: Campaign = buildCurrentCampaignDraft("Scene Planned");
 
       setGeneratedCampaign(newCampaign);
       // Map scenes order fields correctly
       setTempScenes(computedScenes.map((s, idx) => ({
         ...s,
-        id: "scene_" + Date.now() + "_" + idx,
+        id: "scene_" + newCampaign.id + "_" + Date.now() + "_" + idx,
         campaignId: newCampaign.id,
-        order: idx + 1
+        order: idx + 1,
+        createdAt: s.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       })));
 
       setStep(3);
@@ -321,7 +312,7 @@ export default function NewCampaignView({
 
   return (
     <div id="new-campaign-container" className="space-y-8 animate-fade-in pb-16">
-      
+
       {/* AIS Loader Screen */}
       {isLoading && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
@@ -335,7 +326,7 @@ export default function NewCampaignView({
               <p className="text-slate-500 text-xs font-mono tracking-wide mt-2">{loadingMessage}</p>
             </div>
             <div className="bg-slate-50 rounded-lg p-3 text-slate-400 text-[11px] leading-relaxed">
-              Google Gemini sedang menganalisis keunggulan produk Anda dan menyusun alur scene video promo terbaik yang persuasif & berkonversi tinggi.
+              Menganalisis keunggulan produk Anda dan menyusun alur scene video promo terbaik yang persuasif & berkonversi tinggi.
             </div>
           </div>
         </div>
@@ -352,7 +343,7 @@ export default function NewCampaignView({
             Back to Campaigns
           </button>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 font-sans">
-            Create New Campaign
+            {existingCampaign ? "Resume Campaign Setup" : "Create New Campaign"}
           </h1>
         </div>
 
@@ -385,10 +376,19 @@ export default function NewCampaignView({
         </div>
       )}
 
+      {existingCampaign && (
+        <div className="bg-blue-50 text-blue-800 text-sm p-4 rounded-xl border border-blue-200 flex items-start gap-2.5">
+          <div className="font-bold shrink-0">Resume:</div>
+          <div className="flex-1">
+            Campaign ini dibuka kembali dengan data lama. Anda bisa lanjut dari brief, video setup, atau gunakan scene plan yang sudah ada tanpa regenerate.
+          </div>
+        </div>
+      )}
+
       {/* STEP 1: PRODUCT BRIEF */}
       {step === 1 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* Main Info Columns */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs space-y-5">
@@ -526,7 +526,7 @@ export default function NewCampaignView({
                 <p className="text-xs text-slate-400 mt-1">Upload a clear, well-lit photo of your product to keep shapes, packaging labels, and colors persistent.</p>
               </div>
 
-              <div 
+              <div
                 className="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-xl p-6 text-center cursor-pointer transition-all bg-slate-50/50 hover:bg-white"
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, setProductImage)}
@@ -543,15 +543,15 @@ export default function NewCampaignView({
 
                 {productImage ? (
                   <div className="space-y-4 leading-none">
-                    <img 
-                      src={productImage} 
-                      alt="Product Reference" 
+                    <img
+                      src={productImage}
+                      alt="Product Reference"
                       className="max-h-48 mx-auto rounded-lg border border-slate-200 shadow-2xs object-contain bg-white"
                       referrerPolicy="no-referrer"
                     />
                     <div className="flex gap-2 justify-center">
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={(e) => { e.stopPropagation(); setProductImage(null); }}
                         className="text-xs text-red-600 font-bold hover:underline"
                       >
@@ -578,7 +578,7 @@ export default function NewCampaignView({
       {/* STEP 2: VIDEO SETUP */}
       {step === 2 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* Main config columns */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs space-y-5">
@@ -660,11 +660,10 @@ export default function NewCampaignView({
                     <div
                       key={preset.id}
                       onClick={() => setVisualPreset(preset.id)}
-                      className={`border p-4 rounded-xl cursor-pointer transition-all flex flex-col justify-between h-36 ${
-                        visualPreset === preset.id
-                          ? "border-blue-600 bg-blue-50/20 ring-1 ring-blue-500/20 shadow-xs"
-                          : "border-slate-200 hover:border-slate-300 bg-white"
-                      }`}
+                      className={`border p-4 rounded-xl cursor-pointer transition-all flex flex-col justify-between h-36 ${visualPreset === preset.id
+                        ? "border-blue-600 bg-blue-50/20 ring-1 ring-blue-500/20 shadow-xs"
+                        : "border-slate-200 hover:border-slate-300 bg-white"
+                        }`}
                     >
                       <div>
                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded font-mono ${preset.color}`}>
@@ -675,9 +674,8 @@ export default function NewCampaignView({
                         </p>
                       </div>
                       <div className="text-right">
-                        <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ml-auto ${
-                          visualPreset === preset.id ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 bg-white"
-                        }`}>
+                        <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ml-auto ${visualPreset === preset.id ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 bg-white"
+                          }`}>
                           {visualPreset === preset.id && <Check size={10} className="stroke-[3]" />}
                         </span>
                       </div>
@@ -697,11 +695,11 @@ export default function NewCampaignView({
                   <p className="text-xs text-slate-400 mt-0.5">Optional. Provide physical face characters or pose presenter style anchors.</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={useModelReference} 
+                  <input
+                    type="checkbox"
+                    checked={useModelReference}
                     onChange={(e) => setUseModelReference(e.target.checked)}
-                    className="sr-only peer" 
+                    className="sr-only peer"
                   />
                   <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-blue-500/20 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
@@ -712,7 +710,7 @@ export default function NewCampaignView({
                   {/* Model Image Upload */}
                   <div className="space-y-4">
                     <label className="text-xs font-bold text-slate-700 block">Model Photo Reference *</label>
-                    <div 
+                    <div
                       className="border-2 border-dashed border-slate-200 hover:border-blue-500 rounded-lg p-4 text-center cursor-pointer transition-all bg-slate-50/50 hover:bg-white flex flex-col justify-center items-center h-44"
                       onDragOver={handleDragOver}
                       onDrop={(e) => handleDrop(e, setModelReferenceImage)}
@@ -728,14 +726,14 @@ export default function NewCampaignView({
                       />
                       {modelReferenceImage ? (
                         <div className="space-y-2">
-                          <img 
-                            src={modelReferenceImage} 
-                            alt="Model Ref" 
+                          <img
+                            src={modelReferenceImage}
+                            alt="Model Ref"
                             className="max-h-28 mx-auto rounded border border-slate-100 object-contain"
                             referrerPolicy="no-referrer"
                           />
-                          <button 
-                            type="button" 
+                          <button
+                            type="button"
                             onClick={(e) => { e.stopPropagation(); setModelReferenceImage(null); }}
                             className="text-[10px] text-red-600 hover:underline block mx-auto font-bold"
                           >
@@ -805,11 +803,11 @@ export default function NewCampaignView({
                   <p className="text-xs text-slate-400 mt-0.5 font-sans">Optional. Suggest specific rooms, locations, studios, or workspace environments.</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={useBackgroundReference} 
+                  <input
+                    type="checkbox"
+                    checked={useBackgroundReference}
                     onChange={(e) => setUseBackgroundReference(e.target.checked)}
-                    className="sr-only peer" 
+                    className="sr-only peer"
                   />
                   <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-blue-500/20 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
@@ -820,7 +818,7 @@ export default function NewCampaignView({
                   {/* Background photo upload area */}
                   <div className="space-y-4">
                     <label className="text-xs font-bold text-slate-700 block">Environment Photo Reference *</label>
-                    <div 
+                    <div
                       className="border-2 border-dashed border-slate-200 hover:border-blue-500 rounded-lg p-4 text-center cursor-pointer transition-all bg-slate-50/50 hover:bg-white flex flex-col justify-center items-center h-44"
                       onDragOver={handleDragOver}
                       onDrop={(e) => handleDrop(e, setBackgroundReferenceImage)}
@@ -836,14 +834,14 @@ export default function NewCampaignView({
                       />
                       {backgroundReferenceImage ? (
                         <div className="space-y-2">
-                          <img 
-                            src={backgroundReferenceImage} 
-                            alt="Background Ref" 
+                          <img
+                            src={backgroundReferenceImage}
+                            alt="Background Ref"
                             className="max-h-28 mx-auto rounded border border-slate-100 object-contain"
                             referrerPolicy="no-referrer"
                           />
-                          <button 
-                            type="button" 
+                          <button
+                            type="button"
                             onClick={(e) => { e.stopPropagation(); setBackgroundReferenceImage(null); }}
                             className="text-[10px] text-red-600 hover:underline block mx-auto font-bold"
                           >
@@ -950,14 +948,14 @@ export default function NewCampaignView({
                   <tr key={scene.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="py-4 px-4 text-center">
                       <div className="flex flex-col items-center justify-center gap-1.5 text-slate-300">
-                        <button 
+                        <button
                           onClick={() => handleMoveUp(index)}
                           disabled={index === 0}
                           className="hover:text-slate-600 disabled:opacity-30 disabled:hover:text-slate-300 transition-colors cursor-pointer"
                         >
                           <ChevronUp size={16} />
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleMoveDown(index)}
                           disabled={index === tempScenes.length - 1}
                           className="hover:text-slate-600 disabled:opacity-30 disabled:hover:text-slate-300 transition-colors cursor-pointer"
@@ -1074,13 +1072,22 @@ export default function NewCampaignView({
             </button>
           )}
 
+          {step === 2 && hasExistingScenePlan && (
+            <button
+              onClick={handleReviewExistingScenePlan}
+              className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg px-4.5 py-2.5 text-sm font-semibold transition-all cursor-pointer"
+            >
+              Review Existing Scene Plan
+            </button>
+          )}
+
           {step === 2 && (
             <button
               onClick={handleTriggerAIScenePlanGeneration}
               className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4.5 py-2.5 text-sm font-semibold shadow-md shadow-blue-200 hover:shadow-lg transition-all cursor-pointer"
             >
               <Sparkles size={16} />
-              Generate Scene Plan
+              {hasExistingScenePlan ? "Regenerate Scene Plan" : "Generate Scene Plan"}
             </button>
           )}
 

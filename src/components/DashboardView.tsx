@@ -21,6 +21,7 @@ interface DashboardViewProps {
   campaigns: Campaign[];
   scenes: Scene[];
   onNavigateToNewCampaign: () => void;
+  onResumeCampaignSetup: (campaignId: string) => void;
   onNavigateToSceneBuilder: (campaignId: string) => void;
   onDuplicateCampaign: (campaignId: string) => void;
   onDeleteCampaign: (campaignId: string) => void;
@@ -30,6 +31,7 @@ export default function DashboardView({
   campaigns,
   scenes,
   onNavigateToNewCampaign,
+  onResumeCampaignSetup,
   onNavigateToSceneBuilder,
   onDuplicateCampaign,
   onDeleteCampaign
@@ -155,6 +157,7 @@ export default function DashboardView({
         {filteredCampaigns.map((camp) => {
           // Get specific scenes list that belong to this campaign
           const campScenes = scenes.filter(s => s.campaignId === camp.id);
+          const shouldResumeSetup = camp.status === "Draft" || camp.status === "Scene Planned";
           
           return (
             <div 
@@ -259,10 +262,16 @@ export default function DashboardView({
                 </div>
 
                 <button
-                  onClick={() => onNavigateToSceneBuilder(camp.id)}
+                  onClick={() => {
+                    if (shouldResumeSetup) {
+                      onResumeCampaignSetup(camp.id);
+                      return;
+                    }
+                    onNavigateToSceneBuilder(camp.id);
+                  }}
                   className="inline-flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-blue-600 hover:text-white hover:border-blue-600 rounded px-3 py-1.5 text-xs font-bold text-slate-700 transition-all cursor-pointer shadow-2xs"
                 >
-                  {camp.status === "Draft" ? "Edit Plan" : "Continue"}
+                  {camp.status === "Draft" ? "Resume Brief" : camp.status === "Scene Planned" ? "Resume Setup" : "Continue"}
                   <ChevronRight size={14} />
                 </button>
               </div>
