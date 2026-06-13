@@ -1,0 +1,6 @@
+{
+  "name": "Promo Scene Assistant V0",
+  "description": "AI Prompt & Asset Assistant for creating promotional product video scenes",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
