@@ -31,7 +31,8 @@ import PromptTemplatesView from "./components/PromptTemplatesView";
 import SettingsView from "./components/SettingsView";
 import { buildPersistentMediaRef, deletePersistentMedia, hydrateEntityMedia, sanitizeEntityMedia } from "./lib/persistentMedia";
 
-const MIN_SCENE_DURATION_SECONDS = 4;
+const MIN_SCENE_DURATION_SECONDS = 2;
+const MAX_TOTAL_VIDEO_DURATION_SECONDS = 10;
 
 export default function App() {
   const CAMPAIGN_MEDIA_FIELDS: Array<keyof Campaign> = ["productImage", "backgroundReferenceImage", "modelReferenceImage"];
@@ -161,7 +162,7 @@ export default function App() {
         problemSolved: "Mesin cepat panas, transmisi kasar, suara mesin berisik",
         specialNotes: "Tonjolkan botol kemasan merah MaxSpeed berkilau secara mewah.",
         platform: "Instagram Reels",
-        totalDuration: 15,
+        totalDuration: MAX_TOTAL_VIDEO_DURATION_SECONDS,
         sceneCount: 4,
         aspectRatio: "9:16",
         visualPreset: "Product Premium",
@@ -223,7 +224,7 @@ export default function App() {
           type: "product_intro",
           goal: "Tampilkan brand MaxSpeed secara mewah",
           description: "Botol pelumas merah MaxSpeed berkilau diletakkan di tengah meja display melingkar berputar bersinar mewah cinematic.",
-          duration: 4,
+          duration: 3,
           focusMessage: "Ini Solusinya: MaxSpeed Premium Synth!",
           modelPresence: "Hidden",
           productPresence: "Hero Focus",
@@ -253,7 +254,7 @@ export default function App() {
           type: "benefit_highlight",
           goal: "Jelaskan kemudahan transmisi halus",
           description: "Potongan animasi close-up gir logam dalam mesin yang licin terlumasi cairan oli merah bening mewah, berputar sangat presisi hampa gesekan.",
-          duration: 4,
+          duration: 3,
           focusMessage: "Getaran Mereda, Tarikan Enteng Seketika!",
           modelPresence: "Hidden",
           productPresence: "Background",
@@ -283,7 +284,7 @@ export default function App() {
           type: "call_to_action",
           goal: "Persuasi pembelian produk sekarang",
           description: "Botol merah MaxSpeed didampingi kotak kemasan eksklusif dengan kelap-kelip cahaya studio bersinar, penunjuk arah tangan kecil mengarah ke biolink.",
-          duration: 4,
+          duration: 2,
           focusMessage: "Miliki Mesin Halus! Beli Sekarang!",
           modelPresence: "Hidden",
           productPresence: "Hero Focus",

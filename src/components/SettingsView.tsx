@@ -91,59 +91,19 @@ export default function SettingsView({
         {/* Core AI API Services parameters */}
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs space-y-4">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono border-b border-slate-100 pb-2">
-            AI & Generative API Services
+            AI Prompt Engine
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">Google Gemini Core Model</label>
-              <select
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold"
-              >
-                <option value="gemini-3.5-flash">gemini-3.5-flash (Fast & recommended)</option>
-                <option value="gemini-3.5-pro">gemini-3.5-pro (High intelligence)</option>
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">Image Generation Model</label>
-              <input
-                type="text"
-                value={imgProv}
-                onChange={(e) => setImgProv(e.target.value)}
-                placeholder="gemini-2.5-flash-image"
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-mono font-bold text-slate-600"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">Voice Synthesis Model</label>
-              <input
-                type="text"
-                value={voiceProv}
-                onChange={(e) => setVoiceProv(e.target.value)}
-                placeholder="gemini-3.1-flash-tts-preview"
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-mono font-bold text-slate-600"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">Default Indonesian Voice preset</label>
-              <select
-                value={voiceName}
-                onChange={(e) => setVoiceName(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold cursor-pointer"
-              >
-                <option value="Kore">Gadis / Kore (Friendly & Cheerful female voice)</option>
-                <option value="Puck">Lestari / Puck (Standard Indonesian voice)</option>
-                <option value="Zephyr">Bagus / Zephyr (Deep masculine professional voice)</option>
-                <option value="Fenrir">Dendy / Fenrir (Energetic promotional vocal)</option>
-              </select>
-            </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-700">Google Gemini Core Model</label>
+            <select
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold"
+            >
+              <option value="gemini-3.5-flash">gemini-3.5-flash (Fast & recommended)</option>
+              <option value="gemini-3.5-pro">gemini-3.5-pro (High intelligence)</option>
+            </select>
           </div>
 
           <div className="space-y-1.5">
@@ -216,50 +176,6 @@ export default function SettingsView({
                 <option value="ZIP Multi-Track Archive">ZIP Multi-Track Archive</option>
                 <option value="Plain JSON Object text">Plain JSON Object text</option>
               </select>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs space-y-4">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono border-b border-slate-100 pb-2">
-            Feature Visibility
-          </h3>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <div>
-                <div className="text-xs font-bold text-slate-700">Show Generate Image Button</div>
-                <div className="text-[11px] text-slate-400 mt-1">
-                  Tampilkan atau sembunyikan tombol generate image di Scene Builder.
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                <input
-                  type="checkbox"
-                  checked={enableImageGeneration}
-                  onChange={(e) => setEnableImageGeneration(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-blue-500/20 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <div>
-                <div className="text-xs font-bold text-slate-700">Show Generate Voice Button</div>
-                <div className="text-[11px] text-slate-400 mt-1">
-                  Tampilkan atau sembunyikan tombol generate voice di Scene Builder.
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                <input
-                  type="checkbox"
-                  checked={enableVoiceGeneration}
-                  onChange={(e) => setEnableVoiceGeneration(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-blue-500/20 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -19,7 +19,49 @@ import {
 } from "lucide-react";
 import { Campaign, Scene } from "../types";
 
-const MIN_SCENE_DURATION_SECONDS = 4;
+const MIN_SCENE_DURATION_SECONDS = 2;
+const MAX_TOTAL_VIDEO_DURATION_SECONDS = 10;
+const TOTAL_DURATION_OPTIONS = [6, 8, 10];
+const SCENE_COUNT_OPTIONS = [2, 3, 4, 5];
+
+function normalizeSceneDurations(scenes: Scene[], targetTotal: number): Scene[] {
+  const normalized = scenes.map((scene) => ({
+    ...scene,
+    duration: Math.max(MIN_SCENE_DURATION_SECONDS, scene.duration || MIN_SCENE_DURATION_SECONDS)
+  }));
+
+  const minimumPossibleTotal = normalized.length * MIN_SCENE_DURATION_SECONDS;
+  if (minimumPossibleTotal > targetTotal) {
+    return normalized.map((scene) => ({
+      ...scene,
+      duration: MIN_SCENE_DURATION_SECONDS
+    }));
+  }
+
+  let total = normalized.reduce((sum, scene) => sum + scene.duration, 0);
+
+  while (total > targetTotal) {
+    const adjustableScene = [...normalized]
+      .sort((left, right) => right.duration - left.duration)
+      .find((scene) => scene.duration > MIN_SCENE_DURATION_SECONDS);
+
+    if (!adjustableScene) {
+      break;
+    }
+
+    adjustableScene.duration -= 1;
+    total -= 1;
+  }
+
+  let cursor = 0;
+  while (total < targetTotal && normalized.length > 0) {
+    normalized[cursor % normalized.length].duration += 1;
+    total += 1;
+    cursor += 1;
+  }
+
+  return normalized;
+}
 
 interface NewCampaignViewProps {
   onBackToDashboard: () => void;
@@ -37,10 +79,15 @@ export default function NewCampaignView({
   initialScenes
 }: NewCampaignViewProps) {
   const existingCampaign = initialTemplate?.id ? (initialTemplate as Campaign) : null;
-  const existingScenes = (initialScenes || []).map((scene) => ({
-    ...scene,
-    duration: Math.max(MIN_SCENE_DURATION_SECONDS, scene.duration || MIN_SCENE_DURATION_SECONDS)
-  }));
+  const normalizedInitialDuration = Math.min(
+    initialTemplate?.totalDuration || MAX_TOTAL_VIDEO_DURATION_SECONDS,
+    MAX_TOTAL_VIDEO_DURATION_SECONDS
+  );
+  const normalizedInitialSceneCount = Math.min(
+    initialTemplate?.sceneCount || 4,
+    Math.floor(normalizedInitialDuration / MIN_SCENE_DURATION_SECONDS)
+  );
+  const existingScenes = normalizeSceneDurations(initialScenes || [], normalizedInitialDuration);
   const hasExistingScenePlan = existingScenes.length > 0;
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -61,9 +108,9 @@ export default function NewCampaignView({
 
   // Form Fields State - Step 2: Video Setup
   const [platform, setPlatform] = useState(initialTemplate?.platform || "TikTok");
-  const [totalDuration, setTotalDuration] = useState<number>(initialTemplate?.totalDuration || 15);
+  const [totalDuration, setTotalDuration] = useState<number>(normalizedInitialDuration);
   const [aspectRatio, setAspectRatio] = useState(initialTemplate?.aspectRatio || "9:16");
-  const [sceneCount, setSceneCount] = useState<number>(initialTemplate?.sceneCount || 4);
+  const [sceneCount, setSceneCount] = useState<number>(normalizedInitialSceneCount);
   const [visualPreset, setVisualPreset] = useState(initialTemplate?.visualPreset || "Marketplace Clean");
 
   // Model reference optional toggle
@@ -86,6 +133,7 @@ export default function NewCampaignView({
   // Step 3 state (The resulting generated scene plan)
   const [generatedCampaign, setGeneratedCampaign] = useState<Campaign | null>(existingCampaign);
   const [tempScenes, setTempScenes] = useState<Scene[]>(existingScenes);
+  const maxAllowedSceneCount = Math.floor(totalDuration / MIN_SCENE_DURATION_SECONDS);
 
   // File Input Refs
   const productImageRef = useRef<HTMLInputElement>(null);
@@ -132,6 +180,12 @@ export default function NewCampaignView({
     }
   };
 
+  useEffect(() => {
+    if (sceneCount > maxAllowedSceneCount) {
+      setSceneCount(maxAllowedSceneCount);
+    }
+  }, [sceneCount, maxAllowedSceneCount]);
+
   const buildCurrentCampaignDraft = (status: Campaign["status"] = "Scene Planned"): Campaign => {
     const nowIso = new Date().toISOString();
 
@@ -148,8 +202,8 @@ export default function NewCampaignView({
       problemSolved,
       specialNotes,
       platform,
-      totalDuration,
-      sceneCount,
+      totalDuration: Math.min(totalDuration, MAX_TOTAL_VIDEO_DURATION_SECONDS),
+      sceneCount: Math.min(sceneCount, Math.floor(totalDuration / MIN_SCENE_DURATION_SECONDS)),
       aspectRatio,
       visualPreset,
       useBackgroundReference,
@@ -197,7 +251,7 @@ export default function NewCampaignView({
 
       setGeneratedCampaign(newCampaign);
       // Map scenes order fields correctly
-      setTempScenes(computedScenes.map((s, idx) => ({
+      const normalizedScenes = normalizeSceneDurations(computedScenes.map((s, idx) => ({
         ...s,
         id: "scene_" + newCampaign.id + "_" + Date.now() + "_" + idx,
         campaignId: newCampaign.id,
@@ -205,7 +259,9 @@ export default function NewCampaignView({
         duration: Math.max(MIN_SCENE_DURATION_SECONDS, s.duration || MIN_SCENE_DURATION_SECONDS),
         createdAt: s.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString()
-      })));
+      })), totalDuration);
+
+      setTempScenes(normalizedScenes);
 
       setStep(3);
     } catch (err: any) {
@@ -306,10 +362,7 @@ export default function NewCampaignView({
   // Final confirmation to continue block
   const handleProceedToSceneBuilder = () => {
     if (!generatedCampaign) return;
-    const normalizedScenes = tempScenes.map((scene) => ({
-      ...scene,
-      duration: Math.max(MIN_SCENE_DURATION_SECONDS, scene.duration || MIN_SCENE_DURATION_SECONDS)
-    }));
+    const normalizedScenes = normalizeSceneDurations(tempScenes, totalDuration);
     // Calculate final duration
     const totalDurationCalculated = normalizedScenes.reduce((acc, s) => acc + s.duration, 0);
     const updatedCampaign: Campaign = {
@@ -618,10 +671,11 @@ export default function NewCampaignView({
                     onChange={(e) => setTotalDuration(Number(e.target.value))}
                     className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-sm cursor-pointer"
                   >
-                    <option value={10}>10 Seconds (Very Fast Hook)</option>
-                    <option value={15}>15 Seconds (Short & Punchy)</option>
-                    <option value={20}>20 Seconds (Express Demo)</option>
-                    <option value={30}>30 Seconds (Detail Review)</option>
+                    {TOTAL_DURATION_OPTIONS.map((durationOption) => (
+                      <option key={durationOption} value={durationOption}>
+                        {durationOption} Seconds {durationOption === 10 ? "(Gemini max video length)" : "(Short-form video)"}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -648,11 +702,17 @@ export default function NewCampaignView({
                     onChange={(e) => setSceneCount(Number(e.target.value))}
                     className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-sm cursor-pointer"
                   >
-                    <option value={3}>3 Scenes (Hook - Advantage - Call-to-action)</option>
-                    <option value={4}>4 Scenes (Standard Promo Flow)</option>
-                    <option value={5}>5 Scenes (Comprehensive Showcase)</option>
-                    <option value={6}>6 Scenes (Deep specs showcase)</option>
+                    {SCENE_COUNT_OPTIONS
+                      .filter((countOption) => countOption <= maxAllowedSceneCount)
+                      .map((countOption) => (
+                        <option key={countOption} value={countOption}>
+                          {countOption} Scenes
+                        </option>
+                      ))}
                   </select>
+                  <p className="text-[11px] text-slate-400">
+                    Dengan minimum {MIN_SCENE_DURATION_SECONDS} detik per scene dan total {totalDuration} detik, maksimal {maxAllowedSceneCount} scene.
+                  </p>
                 </div>
               </div>
 

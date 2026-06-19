@@ -1,18 +1,11 @@
 import React, { useState } from "react";
 import { 
   FolderOpen, 
-  Image as ImageIcon, 
-  Music, 
   FileCode, 
   Download, 
   Trash2, 
   Copy, 
-  Check, 
-  Play, 
-  Pause,
-  ExternalLink,
-  ChevronRight,
-  Info
+  Check
 } from "lucide-react";
 import { Campaign, Asset } from "../types";
 
@@ -29,23 +22,20 @@ export default function CampaignAssetsView({
 }: CampaignAssetsViewProps) {
   // Select active campaign filter defaults to first campaign
   const [selectedCampId, setSelectedCampId] = useState<string>(campaigns[0]?.id || "All");
-  const [assetTypeFilter, setAssetTypeFilter] = useState<"All" | "uploaded" | "image" | "voice" | "export">("All");
+  const [assetTypeFilter, setAssetTypeFilter] = useState<"All" | "uploaded" | "export">("All");
 
   const [copiedMap, setCopiedMap] = useState<Record<string, boolean>>({});
-
-  // Audio players
-  const [activePlayUrl, setActivePlayUrl] = useState<string | null>(null);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
 
   const filteredAssets = assets.filter((asset) => {
     // Campaign filter
     if (selectedCampId !== "All" && asset.campaignId !== selectedCampId) {
       return false;
     }
+    if (!(asset.type.startsWith("uploaded_") || asset.type.startsWith("export_"))) {
+      return false;
+    }
     // Asset Type Segment filter
     if (assetTypeFilter === "uploaded" && !asset.type.startsWith("uploaded_")) return false;
-    if (assetTypeFilter === "image" && asset.type !== "generated_image") return false;
-    if (assetTypeFilter === "voice" && asset.type !== "generated_voice") return false;
     if (assetTypeFilter === "export" && !asset.type.startsWith("export_")) return false;
 
     return true;
@@ -59,24 +49,6 @@ export default function CampaignAssetsView({
     }, 2000);
   };
 
-  const handleAudioPlay = (url: string) => {
-    if (activePlayUrl === url && audioElement) {
-      audioElement.pause();
-      setActivePlayUrl(null);
-    } else {
-      if (audioElement) {
-        audioElement.pause();
-      }
-      const newAudio = new Audio(url);
-      newAudio.play();
-      newAudio.onended = () => {
-        setActivePlayUrl(null);
-      };
-      setAudioElement(newAudio);
-      setActivePlayUrl(url);
-    }
-  };
-
   return (
     <div id="campaign-assets-section" className="space-y-6 animate-fade-in pb-16">
       
@@ -87,7 +59,7 @@ export default function CampaignAssetsView({
             Campaign Asset Manager
           </h1>
           <p className="text-slate-500 mt-1 max-w-xl text-sm">
-            View, play, and export all uploaded references and AI generated assets.
+            View uploaded references and export packs created from approved prompt scenes.
           </p>
         </div>
 
@@ -112,8 +84,6 @@ export default function CampaignAssetsView({
         {[
           { id: "All", title: "All Assets" },
           { id: "uploaded", title: "Uploaded References" },
-          { id: "image", title: "Generated Images" },
-          { id: "voice", title: "Voices (Audio)" },
           { id: "export", title: "Export Packs" }
         ].map((tab) => (
           <button
@@ -136,7 +106,7 @@ export default function CampaignAssetsView({
           <FolderOpen size={44} className="text-slate-300 mx-auto" />
           <h4 className="text-sm font-bold text-slate-800">No assets discovered</h4>
           <p className="text-xs text-slate-400 max-w-sm mx-auto">
-            Uploaded reference images or AI-generated image/audio files for this campaign filter will appear here once saved.
+            Uploaded references dan export pack untuk campaign ini akan tampil di sini setelah disimpan.
           </p>
         </div>
       ) : (
@@ -161,16 +131,6 @@ export default function CampaignAssetsView({
                       className="absolute inset-0 w-full h-full object-cover bg-white"
                       referrerPolicy="no-referrer"
                     />
-                  ) : asset.type === "generated_voice" ? (
-                    <div className="space-y-3 text-center">
-                      <button
-                        onClick={() => handleAudioPlay(itemUrl)}
-                        className="w-11 h-11 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center mx-auto shadow-md cursor-pointer transition-transform active:scale-95"
-                      >
-                        {activePlayUrl === itemUrl ? <Pause size={18} /> : <Play size={18} className="translate-x-0.5" />}
-                      </button>
-                      <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase font-mono block">AUDIO WAV</span>
-                    </div>
                   ) : (
                     <div className="text-center space-y-2">
                       <FileCode size={32} className="text-blue-500 mx-auto" />

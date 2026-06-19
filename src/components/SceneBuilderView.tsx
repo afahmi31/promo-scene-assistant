@@ -6,23 +6,16 @@ import {
   Check, 
   Trash2, 
   RefreshCw, 
-  Image as ImageIcon, 
-  Play, 
-  Pause, 
-  Download,
   AlertTriangle,
   Info,
   ChevronRight,
-  Eye,
   FileCode,
-  Music,
   Share2,
-  Lock,
   ArrowRight
 } from "lucide-react";
 import { Campaign, Scene, SceneOutput, Asset, Settings as SettingsType } from "../types";
 
-const MIN_SCENE_DURATION_SECONDS = 4;
+const MIN_SCENE_DURATION_SECONDS = 2;
 
 interface SceneBuilderViewProps {
   campaign: Campaign;
@@ -479,7 +472,7 @@ export default function SceneBuilderView({
                   type="text"
                   value={sceneGoal}
                   onChange={(e) => setSceneGoal(e.target.value)}
-                  placeholder="e.g., Menarik penonton di 4 detik awal"
+                  placeholder="e.g., Menarik penonton di 2 detik awal"
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium"
                 />
               </div>
@@ -761,7 +754,7 @@ export default function SceneBuilderView({
           {activeOutput ? (
             <div className="bg-blue-700/50 p-2.5 rounded border border-blue-500/50 text-[10.5px] font-medium flex items-center gap-1.5">
               <Check size={12} className="text-yellow-300 stroke-[3]" />
-              Prompts pack successfully created. Refine or generate media assets below!
+              Prompt pack successfully created. Review and refine the prompt structure below.
             </div>
           ) : (
             <div className="bg-yellow-500/20 p-2.5 rounded border border-yellow-400/30 text-[10.5px] font-semibold text-yellow-100 flex items-center gap-1.5">
@@ -775,35 +768,19 @@ export default function SceneBuilderView({
           <div className="flex justify-between items-start">
             <div>
               <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">
-                Visual Scene Asset
+                Visual Prompt Reference
               </h4>
-              <p className="text-[11px] text-slate-400 mt-0.5">Render standard images of products and scenes</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Gunakan prompt ini di image generator eksternal.</p>
             </div>
-
-            {/* Generate Image action */}
-            {settings.enableImageGeneration && activeOutput && (
-              <button
-                onClick={handleGenerateImage}
-                disabled={isGeneratingImage || isGeneratingOutput}
-                className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 border border-blue-200 hover:bg-blue-50/50 p-1.5 rounded transition-colors disabled:opacity-30 cursor-pointer"
-              >
-                <ImageIcon size={14} />
-                {sceneImageAsset ? "Re-render" : "Generate Asset"}
-              </button>
-            )}
           </div>
 
-          {/* Error Banner for Image Generation */}
           {imageError && (
             <div className="bg-amber-50 text-amber-800 text-[11px] p-3 rounded-lg border border-amber-200/60 leading-relaxed font-sans space-y-1.5">
               <div className="flex items-center gap-1.5 font-bold">
                 <AlertTriangle size={14} className="text-amber-600 shrink-0" />
-                <span>Media Generation setup constraint</span>
+                <span>Prompt Engine Notice</span>
               </div>
               <p>{imageError}</p>
-              <div className="text-[10px] text-slate-400 flex items-center gap-1 border-t border-slate-200/50 pt-1.5">
-                <Lock size={10} /> Active: falling back to high-contrast schematic mock renders
-              </div>
             </div>
           )}
 
@@ -828,78 +805,17 @@ export default function SceneBuilderView({
               className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded text-xs font-mono leading-relaxed"
             />
           </div>
-
-          {settings.enableImageGeneration && (
-            <div className="border border-slate-200/65 rounded-xl aspect-[16/9] w-full bg-slate-50 overflow-hidden relative flex flex-col items-center justify-center text-center p-6 sm:px-12 select-none group">
-              {isGeneratingImage ? (
-                <div className="space-y-3">
-                  <div className="relative">
-                    <div className="w-10 h-10 border-2 border-blue-500/20 border-t-blue-600 rounded-full animate-spin mx-auto" />
-                    <ImageIcon size={16} className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-blue-600" />
-                  </div>
-                  <p className="text-xs font-semibold text-slate-600">Rendering scene elements...</p>
-                </div>
-              ) : sceneImageAsset ? (
-                <React.Fragment>
-                  <img 
-                    src={sceneImageAsset.fileData || sceneImageAsset.fileUrl || ""} 
-                    alt="Scene Render" 
-                    className="absolute inset-0 w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                  
-                  <div className="absolute bottom-2 left-2 bg-slate-900/70 backdrop-blur-xs text-white text-[9px] font-bold font-mono px-2 py-0.5 rounded border border-white/10 uppercase opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 leading-none">
-                    <Eye size={10} /> Model active
-                  </div>
-                </React.Fragment>
-              ) : (
-                <div className="space-y-2">
-                  <ImageIcon size={28} className="text-slate-300 mx-auto" />
-                  <h5 className="text-xs font-bold text-slate-700">No Image Asset Generated</h5>
-                  <p className="text-[10.5px] text-slate-400 leading-normal max-w-[240px] mx-auto font-sans">
-                    Generate image prompt pack then click the 'Generate Asset' button to render visual preview.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
-        {/* Generated Voiceover Speech syntheziser Block */}
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs space-y-4">
           <div className="flex justify-between items-start">
             <div>
               <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">
-                Indonesian Voiceover (Audio)
+                Narration & Voice Prompt
               </h4>
-              <p className="text-[11px] text-slate-400 mt-0.5">Generate speaking voice narrator</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Siapkan naskah narasi dan prompt TTS untuk tool eksternal.</p>
             </div>
-
-            {/* Voice synth prompt action */}
-            {settings.enableVoiceGeneration && activeOutput && (
-              <button
-                onClick={handleGenerateVoice}
-                disabled={isGeneratingVoice || isGeneratingOutput}
-                className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-700 border border-slate-200 hover:bg-indigo-50/50 p-1.5 rounded transition-colors disabled:opacity-30 cursor-pointer"
-              >
-                <Music size={14} />
-                {sceneVoiceAsset ? "Re-voice" : "Generate Voice"}
-              </button>
-            )}
           </div>
-
-          {voiceError && (
-            <div className="bg-amber-50 text-amber-800 text-[11px] p-3 rounded-lg border border-amber-200/60 leading-relaxed font-sans space-y-1.5">
-              <div className="flex items-center gap-1.5 font-bold">
-                <AlertTriangle size={14} className="text-amber-600 shrink-0" />
-                <span>Speech Synth setup constraint</span>
-              </div>
-              <p>{voiceError}</p>
-              <div className="text-[10px] text-slate-400 flex items-center gap-1 border-t border-slate-200/50 pt-1.5">
-                <Lock size={10} /> Falling back to default speak rendering controls
-              </div>
-            </div>
-          )}
 
           {/* Editable Narration Text area */}
           <div className="space-y-1">
@@ -956,46 +872,6 @@ export default function SceneBuilderView({
               className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded text-xs font-mono leading-relaxed text-slate-600"
             />
           </div>
-
-          {settings.enableVoiceGeneration && (
-            <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                {isGeneratingVoice ? (
-                  <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
-                    <RefreshCw size={14} className="text-indigo-600 animate-spin" />
-                  </div>
-                ) : sceneVoiceAsset ? (
-                  <button
-                    onClick={() => playVoiceAsset(sceneVoiceAsset.fileData || sceneVoiceAsset.fileUrl || "")}
-                    className="w-9 h-9 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center shrink-0 cursor-pointer shadow-sm shadow-indigo-100"
-                  >
-                    {playingAudioUrl === (sceneVoiceAsset.fileData || sceneVoiceAsset.fileUrl || "") ? <Pause size={14} /> : <Play size={14} />}
-                  </button>
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center shrink-0">
-                    <Play size={14} className="text-slate-400" />
-                  </div>
-                )}
-                
-                <div>
-                  <span className="text-xs font-bold text-slate-700 block">Indonesian Narrator Audio</span>
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    {sceneVoiceAsset ? "Voice ready to play" : "Pending asset creation"}
-                  </span>
-                </div>
-              </div>
-
-              {sceneVoiceAsset && (
-                <a 
-                  href={sceneVoiceAsset.fileData || "#"} 
-                  download={`VO_Scene_${sortedScenes.findIndex(s => s.id === activeScene.id) + 1}.mp3`}
-                  className="p-2 hover:bg-slate-200 rounded text-slate-500 transition-colors cursor-pointer"
-                >
-                  <Download size={14} />
-                </a>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Overlay Badges and Video prompt reference locks */}
