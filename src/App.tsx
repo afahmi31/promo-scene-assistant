@@ -35,7 +35,7 @@ const MIN_SCENE_DURATION_SECONDS = 2;
 const MAX_TOTAL_VIDEO_DURATION_SECONDS = 10;
 
 export default function App() {
-  const CAMPAIGN_MEDIA_FIELDS: Array<keyof Campaign> = ["productImage", "backgroundReferenceImage", "modelReferenceImage"];
+  const CAMPAIGN_MEDIA_FIELDS: Array<keyof Campaign> = ["productImage", "modelReferenceImage", "referenceAssets"];
   const SCENE_MEDIA_FIELDS: Array<keyof Scene> = ["sceneBackgroundImage"];
   const ASSET_MEDIA_FIELDS: Array<keyof Asset> = ["fileData"];
 
@@ -167,8 +167,7 @@ export default function App() {
         aspectRatio: "9:16",
         visualPreset: "Product Premium",
         useBackgroundReference: false,
-        backgroundReferenceImage: null,
-        backgroundReferenceNotes: "",
+        referenceAssets: [],
         narrationTone: "Review style",
         language: "Indonesian",
         useModelReference: false,
@@ -465,7 +464,7 @@ export default function App() {
           aspectRatio: partialCamp.aspectRatio,
           visualPreset: partialCamp.visualPreset,
           useBackgroundReference: partialCamp.useBackgroundReference,
-          backgroundReferenceNotes: partialCamp.backgroundReferenceNotes,
+          referenceAssets: partialCamp.referenceAssets,
           narrationTone: partialCamp.narrationTone,
           language: partialCamp.language,
           useModelReference: partialCamp.useModelReference,

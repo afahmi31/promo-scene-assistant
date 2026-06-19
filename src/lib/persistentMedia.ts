@@ -96,6 +96,23 @@ export const sanitizeEntityMedia = async <T extends Record<string, any>>(
     mediaFields.map(async (fieldName) => {
       const rawValue = sanitized[fieldName];
 
+      if (Array.isArray(rawValue)) {
+        await Promise.all(
+          rawValue.map(async (item, index) => {
+            if (item && typeof item === "object" && typeof item.image === "string" && item.image.length > 0) {
+              if (isPersistentMediaRef(item.image)) return;
+              if (!shouldPersistOutsideLocalStorage(item.image)) return;
+
+              const itemId = item.id || String(index);
+              const ref = buildPersistentMediaRef(entityType, entityId, `${fieldName}_${itemId}`);
+              await writePersistentMedia(ref, item.image);
+              item.image = ref;
+            }
+          })
+        );
+        return;
+      }
+
       if (typeof rawValue !== "string" || rawValue.length === 0) {
         return;
       }
@@ -126,6 +143,18 @@ export const hydrateEntityMedia = async <T extends Record<string, any>>(
   await Promise.all(
     mediaFields.map(async (fieldName) => {
       const rawValue = hydrated[fieldName];
+
+      if (Array.isArray(rawValue)) {
+        await Promise.all(
+          rawValue.map(async (item) => {
+            if (item && typeof item === "object" && isPersistentMediaRef(item.image)) {
+              item.image = await readPersistentMedia(item.image);
+            }
+          })
+        );
+        return;
+      }
+
       if (!isPersistentMediaRef(rawValue)) {
         return;
       }

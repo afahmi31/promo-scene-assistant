@@ -1,3 +1,9 @@
+export interface CampaignReference {
+  id: string;
+  image: string | null;
+  notes: string;
+}
+
 export interface Campaign {
   id: string;
   title: string;
@@ -18,8 +24,7 @@ export interface Campaign {
   visualPreset: string;
 
   useBackgroundReference: boolean;
-  backgroundReferenceImage: string | null;
-  backgroundReferenceNotes: string;
+  referenceAssets: CampaignReference[];
 
   narrationTone: string;
   language: string;
