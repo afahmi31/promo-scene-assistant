@@ -15,9 +15,12 @@ import {
   FileText,
   MousePointer,
   Settings,
+  Save,
   X
 } from "lucide-react";
 import { Campaign, Scene, CampaignReference } from "../types";
+import { toast, Toaster } from "sonner";
+import AssetUploader from "./AssetUploader";
 
 const MIN_SCENE_DURATION_SECONDS = 2;
 const MAX_TOTAL_VIDEO_DURATION_SECONDS = 10;
@@ -130,14 +133,36 @@ export default function NewCampaignView({
   const [ctaType, setCtaType] = useState<string>(initialTemplate?.ctaType || "Cek keranjang");
 
   // Save draft to localStorage
-  const handleSaveDraft = () => {
-    const draft = buildCurrentCampaignDraft();
-    try {
-      localStorage.setItem('draftCampaign', JSON.stringify(draft));
-    } catch (e) {
-      console.error('Failed to save draft', e);
+  const handleSaveDraft = async () => {
+  const draft = buildCurrentCampaignDraft();
+  try {
+    const response = await fetch('/api/draft', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(draft),
+      credentials: 'include', // send Sanctum cookie
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      toast.error(err.message || 'Failed to save draft');
+      throw new Error(err.message || 'Failed to save draft');
     }
-  };
+    const result = await response.json();
+    console.log('Draft saved', result);
+    toast.success('Draft saved successfully');
+    // Optionally update local state with returned ID
+    if (result.id) {
+      // update existing campaign id if needed
+    }
+  } catch (e) {
+    console.error('Error saving draft', e);
+    setErrorMessage(e.message);
+      toast.error(`Error saving draft: ${e.message}`);
+  }
+};
 
   // Load draft on component mount
   useEffect(() => {
@@ -227,22 +252,25 @@ export default function NewCampaignView({
     }
   };
 
-  const handleAddReferenceAsset = () => {
-    setReferenceAssets([...referenceAssets, { id: `ref_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, image: null, notes: "" }]);
-  };
 
-  const handleRemoveReferenceAsset = (id: string) => {
-    setReferenceAssets(referenceAssets.filter(r => r.id !== id));
-  };
 
-  const handleReferenceImageChange = (id: string, imageStr: string | null) => {
-    setReferenceAssets(referenceAssets.map(r => r.id === id ? { ...r, image: imageStr } : r));
-  };
 
-  const handleReferenceNotesChange = (id: string, notes: string) => {
-    setReferenceAssets(referenceAssets.map(r => r.id === id ? { ...r, notes } : r));
-  };
 
+
+
+
+
+  // Handler for AssetUploader success
+  const handleAssetUploadSuccess = (uploaded: { id: number; url: string; description: string }[]) => {
+    const newRefs = uploaded.map(u => ({
+      id: `ref_${u.id}`,
+      image: u.url,
+      notes: u.description || ''
+    } as CampaignReference));
+    setReferenceAssets(prev => [...prev, ...newRefs]);
+    // Ensure toggle stays on when assets are added
+    setUseBackgroundReference(true);
+  };
   useEffect(() => {
     if (sceneCount > maxAllowedSceneCount) {
       setSceneCount(maxAllowedSceneCount);
@@ -437,6 +465,7 @@ export default function NewCampaignView({
 
   return (
     <div id="new-campaign-container" className="space-y-8 animate-fade-in pb-16">
+      <Toaster />
 
       {/* AIS Loader Screen */}
       {isLoading && (
@@ -470,6 +499,13 @@ export default function NewCampaignView({
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 font-sans">
             {existingCampaign ? "Resume Campaign Setup" : "Create New Campaign"}
           </h1>
+          <button
+            onClick={handleSaveDraft}
+            className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-800 text-sm font-medium transition-colors cursor-pointer group mb-1"
+          >
+            <Save size={16} className="group-hover:-translate-y-0.5 transition-transform" />
+            Save Draft
+          </button>
         </div>
 
         {/* Multi-step progress tracker */}
@@ -947,101 +983,7 @@ export default function NewCampaignView({
 
               {useBackgroundReference && (
                 <div className="space-y-4 pt-3 border-t border-slate-100 animate-slide-down">
-                  {referenceAssets.length === 0 && (
-                    <div className="text-center py-4 bg-slate-50 border border-dashed border-slate-200 rounded-lg">
-                      <p className="text-xs text-slate-500 font-medium">No references added yet.</p>
-                      <button
-                        type="button"
-                        onClick={handleAddReferenceAsset}
-                        className="mt-2 text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1 rounded hover:bg-blue-100 transition-colors"
-                      >
-                        Add First Reference
-                      </button>
-                    </div>
-                  )}
-
-                  {referenceAssets.map((asset, index) => (
-                    <div key={asset.id} className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-slate-100 rounded-lg relative bg-slate-50/30">
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveReferenceAsset(asset.id)}
-                        className="absolute -top-2 -right-2 bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 rounded-full p-1 shadow-sm transition-all"
-                        title="Remove Reference"
-                      >
-                        <X size={14} />
-                      </button>
-
-                      {/* Reference photo upload area */}
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-700 block">Asset Photo Reference {index + 1}</label>
-                        <div
-                          className="border-2 border-dashed border-slate-200 hover:border-blue-500 rounded-lg p-4 text-center cursor-pointer transition-all bg-white hover:bg-slate-50 flex flex-col justify-center items-center h-36"
-                          onClick={() => {
-                            const input = document.getElementById(`upload-${asset.id}`) as HTMLInputElement;
-                            if (input) input.click();
-                          }}
-                        >
-                          <input
-                            type="file"
-                            id={`upload-${asset.id}`}
-                            accept="image/*"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                const reader = new FileReader();
-                                reader.onloadend = () => handleReferenceImageChange(asset.id, reader.result as string);
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                            className="hidden"
-                          />
-                          {asset.image ? (
-                            <div className="space-y-2">
-                              <img
-                                src={asset.image}
-                                alt={`Reference ${index + 1}`}
-                                className="max-h-24 mx-auto rounded border border-slate-100 object-contain"
-                                referrerPolicy="no-referrer"
-                              />
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); handleReferenceImageChange(asset.id, null); }}
-                                className="text-[10px] text-red-600 hover:underline block mx-auto font-bold"
-                              >
-                                Clear Image
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="space-y-2">
-                              <Upload size={20} className="text-slate-400 mx-auto" />
-                              <span className="text-xs text-blue-600 font-bold block">Upload image</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Notes on reference usage */}
-                      <div className="space-y-1.5 flex flex-col justify-start">
-                        <label className="text-xs font-bold text-slate-700 block">Description & Context</label>
-                        <textarea
-                          value={asset.notes}
-                          onChange={(e) => handleReferenceNotesChange(asset.id, e.target.value)}
-                          placeholder="Describe how to use this reference in the scene..."
-                          className="w-full bg-white border border-slate-200 p-3 rounded-lg text-xs leading-relaxed font-sans h-full min-h-[144px]"
-                        />
-                      </div>
-                    </div>
-                  ))}
-
-                  {referenceAssets.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={handleAddReferenceAsset}
-                      className="w-full py-2 border-2 border-dashed border-slate-200 text-slate-500 rounded-lg text-xs font-bold hover:bg-slate-50 hover:text-slate-700 transition-colors flex items-center justify-center gap-1"
-                    >
-                      <Plus size={14} /> Add Another Reference
-                    </button>
-                  )}
+                  <AssetUploader campaignId={existingCampaign?.id || ''} onUploadSuccess={handleAssetUploadSuccess} />
                 </div>
               )}
             </div>
