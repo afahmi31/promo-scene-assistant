@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { Campaign, Scene } from "../types";
 
+const MIN_SCENE_DURATION_SECONDS = 4;
+
 interface NewCampaignViewProps {
   onBackToDashboard: () => void;
   onGenerateScenePlan: (campaignData: Partial<Campaign>) => Promise<Scene[]>;
@@ -35,7 +37,10 @@ export default function NewCampaignView({
   initialScenes
 }: NewCampaignViewProps) {
   const existingCampaign = initialTemplate?.id ? (initialTemplate as Campaign) : null;
-  const existingScenes = (initialScenes || []).map((scene) => ({ ...scene }));
+  const existingScenes = (initialScenes || []).map((scene) => ({
+    ...scene,
+    duration: Math.max(MIN_SCENE_DURATION_SECONDS, scene.duration || MIN_SCENE_DURATION_SECONDS)
+  }));
   const hasExistingScenePlan = existingScenes.length > 0;
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -197,6 +202,7 @@ export default function NewCampaignView({
         id: "scene_" + newCampaign.id + "_" + Date.now() + "_" + idx,
         campaignId: newCampaign.id,
         order: idx + 1,
+        duration: Math.max(MIN_SCENE_DURATION_SECONDS, s.duration || MIN_SCENE_DURATION_SECONDS),
         createdAt: s.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString()
       })));
@@ -238,7 +244,7 @@ export default function NewCampaignView({
 
   const handleSceneDurationChange = (index: number, val: number) => {
     const updated = [...tempScenes];
-    updated[index].duration = val;
+    updated[index].duration = Math.max(MIN_SCENE_DURATION_SECONDS, val || MIN_SCENE_DURATION_SECONDS);
     setTempScenes(updated);
   };
 
@@ -272,7 +278,7 @@ export default function NewCampaignView({
       type: "benefit_highlight",
       goal: "Tampilkan detail produk lainnya",
       description: "Tampilan produk yang menonjol diletakkan di latar depan.",
-      duration: 3,
+      duration: MIN_SCENE_DURATION_SECONDS,
       focusMessage: "Fokus produk bersih",
       modelPresence: "Product Only",
       productPresence: "Visible",
@@ -300,14 +306,18 @@ export default function NewCampaignView({
   // Final confirmation to continue block
   const handleProceedToSceneBuilder = () => {
     if (!generatedCampaign) return;
+    const normalizedScenes = tempScenes.map((scene) => ({
+      ...scene,
+      duration: Math.max(MIN_SCENE_DURATION_SECONDS, scene.duration || MIN_SCENE_DURATION_SECONDS)
+    }));
     // Calculate final duration
-    const totalDurationCalculated = tempScenes.reduce((acc, s) => acc + s.duration, 0);
+    const totalDurationCalculated = normalizedScenes.reduce((acc, s) => acc + s.duration, 0);
     const updatedCampaign: Campaign = {
       ...generatedCampaign,
       totalDuration: totalDurationCalculated,
-      sceneCount: tempScenes.length
+      sceneCount: normalizedScenes.length
     };
-    onSaveCampaignPlan(updatedCampaign, tempScenes);
+    onSaveCampaignPlan(updatedCampaign, normalizedScenes);
   };
 
   return (
@@ -992,7 +1002,7 @@ export default function NewCampaignView({
                       <div className="flex items-center gap-2">
                         <input
                           type="number"
-                          min={1}
+                          min={MIN_SCENE_DURATION_SECONDS}
                           max={15}
                           value={scene.duration}
                           onChange={(e) => handleSceneDurationChange(index, Number(e.target.value))}

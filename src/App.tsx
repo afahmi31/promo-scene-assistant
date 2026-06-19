@@ -31,6 +31,8 @@ import PromptTemplatesView from "./components/PromptTemplatesView";
 import SettingsView from "./components/SettingsView";
 import { buildPersistentMediaRef, deletePersistentMedia, hydrateEntityMedia, sanitizeEntityMedia } from "./lib/persistentMedia";
 
+const MIN_SCENE_DURATION_SECONDS = 4;
+
 export default function App() {
   const CAMPAIGN_MEDIA_FIELDS: Array<keyof Campaign> = ["productImage", "backgroundReferenceImage", "modelReferenceImage"];
   const SCENE_MEDIA_FIELDS: Array<keyof Scene> = ["sceneBackgroundImage"];
@@ -191,7 +193,7 @@ export default function App() {
           type: "problem_intro",
           goal: "Tarik atensi pengendara motor harian",
           description: "Tampilan close-up dramatis getaran piston bergesekan dengan cipratan sisa oli hitam kotor.",
-          duration: 3,
+          duration: MIN_SCENE_DURATION_SECONDS,
           focusMessage: "Mesin Motor Terasa Kasar dan Berisik?",
           modelPresence: "Hidden",
           productPresence: "Hidden",
@@ -768,7 +770,7 @@ export default function App() {
       type: "benefit_highlight",
       goal: "Demonstrasikan detail produk lainnya",
       description: "Close-up detail produk premium berputar di tengah meja studio minimalis.",
-      duration: 3,
+      duration: MIN_SCENE_DURATION_SECONDS,
       focusMessage: "Kualitas Premium Terbaik!",
       modelPresence: "Product Only",
       productPresence: "Hero Focus",

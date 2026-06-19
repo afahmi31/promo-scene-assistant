@@ -8,6 +8,7 @@ dotenv.config();
 
 const app = express();
 const PORT = 3000;
+const MIN_SCENE_DURATION_SECONDS = 4;
 
 app.use(express.json({ limit: "50mb" }));
 
@@ -123,7 +124,7 @@ Reference fidelity is more important than aesthetic improvement.
 If the uploaded model reference is an avatar, Bitmoji, cartoon, illustration, sticker, vector, flat 2D character, or any non-photoreal style, preserve that original medium and visual style exactly.
 Never reinterpret a referenced 2D avatar as 3D, semi-3D, realistic, cinematic-human, or painterly.
 Total scenes count MUST exactly match: ${videoSetup.sceneCount}.
-Estimated total duration: ${videoSetup.totalDuration} seconds. Divide duration logically across the scenes (each scene usually 2s to 6s depending on scene complexity and goal).`;
+Estimated total duration: ${videoSetup.totalDuration} seconds. Divide duration logically across the scenes (each scene usually ${MIN_SCENE_DURATION_SECONDS}s to 6s depending on scene complexity and goal). Never assign a scene duration below ${MIN_SCENE_DURATION_SECONDS} seconds.`;
 
     const prompt = `Based on below Product information and Video Setup, suggest ${videoSetup.sceneCount} scenes.
 Product Brief:
@@ -159,7 +160,7 @@ Return a valid JSON object matching exactly this structure:
       "type": "opening_hook OR problem_intro OR product_intro OR benefit_highlight OR call_to_action",
       "goal": "Indonesian short string describing goal (e.g. Tarik perhatian audiens)",
       "description": "Indonesian detailed description of what happens visually",
-      "duration": 3,
+      "duration": 4,
       "focusMessage": "Focus point in Indonesian",
       "modelPresence": "Full Body OR Half Body OR Close-up OR Hand only OR Holding Product OR Pointing OR Explaining OR Lifestyle Subject OR Product Only OR Hidden",
       "productPresence": "Hidden OR Background OR Visible OR Hero Focus OR Close-up OR Hand Holding Product OR Product on Table OR Product Beside Model",

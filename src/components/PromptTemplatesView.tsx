@@ -12,7 +12,7 @@ export default function PromptTemplatesView({ onSelectTemplate }: PromptTemplate
       title: "Affiliate Shopee Video Hook Formula",
       tag: "Best for Shopee / TikTok Affiliate",
       badgeColor: "bg-orange-50 text-orange-700 border-orange-200",
-      description: "Formula ini berfokus pada hook masalah dalam 3 detik pertama, diikuti pembuktian klaim manfaat secara langsung secara visual kasar (lifestyle), dan diakhiri CTA cek keranjang kuning.",
+      description: "Formula ini berfokus pada hook masalah dalam 4 detik pertama, diikuti pembuktian klaim manfaat secara langsung secara visual kasar (lifestyle), dan diakhiri CTA cek keranjang kuning.",
       productName: "Smart Thermos Flask Smart Temp",
       productCategory: "Home / Kitchen",
       productDescription: "Thermos stainless steel dengan penunjuk temperatur LED di bagian tutup. Menjaga suhu air panas hingga 24 jam.",

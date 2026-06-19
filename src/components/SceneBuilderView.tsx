@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { Campaign, Scene, SceneOutput, Asset, Settings as SettingsType } from "../types";
 
+const MIN_SCENE_DURATION_SECONDS = 4;
+
 interface SceneBuilderViewProps {
   campaign: Campaign;
   settings: SettingsType;
@@ -82,7 +84,7 @@ export default function SceneBuilderView({
   const [sceneTitle, setSceneTitle] = useState("");
   const [sceneGoal, setSceneGoal] = useState("");
   const [sceneFocus, setSceneFocus] = useState("");
-  const [sceneDuration, setSceneDuration] = useState(3);
+  const [sceneDuration, setSceneDuration] = useState(MIN_SCENE_DURATION_SECONDS);
   const [modelPresence, setModelPresence] = useState("");
   const [productPresence, setProductPresence] = useState("");
   const [subjectPresence, setSubjectPresence] = useState("");
@@ -109,7 +111,7 @@ export default function SceneBuilderView({
       setSceneTitle(activeScene.title);
       setSceneGoal(activeScene.goal);
       setSceneFocus(activeScene.focusMessage);
-      setSceneDuration(activeScene.duration);
+      setSceneDuration(Math.max(MIN_SCENE_DURATION_SECONDS, activeScene.duration || MIN_SCENE_DURATION_SECONDS));
       setModelPresence(activeScene.modelPresence);
       setProductPresence(activeScene.productPresence);
       setSubjectPresence(activeScene.subjectPresence);
@@ -203,7 +205,7 @@ export default function SceneBuilderView({
       title: sceneTitle,
       goal: sceneGoal,
       focusMessage: sceneFocus,
-      duration: sceneDuration,
+      duration: Math.max(MIN_SCENE_DURATION_SECONDS, sceneDuration || MIN_SCENE_DURATION_SECONDS),
       modelPresence,
       productPresence,
       subjectPresence,
@@ -477,7 +479,7 @@ export default function SceneBuilderView({
                   type="text"
                   value={sceneGoal}
                   onChange={(e) => setSceneGoal(e.target.value)}
-                  placeholder="e.g., Menarik penonton di 3 detik awal"
+                  placeholder="e.g., Menarik penonton di 4 detik awal"
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium"
                 />
               </div>
@@ -486,10 +488,10 @@ export default function SceneBuilderView({
                 <label className="text-xs font-bold text-slate-700">Duration (sec)</label>
                 <input
                   type="number"
-                  min={1}
+                  min={MIN_SCENE_DURATION_SECONDS}
                   max={12}
                   value={sceneDuration}
-                  onChange={(e) => setSceneDuration(Number(e.target.value))}
+                  onChange={(e) => setSceneDuration(Math.max(MIN_SCENE_DURATION_SECONDS, Number(e.target.value) || MIN_SCENE_DURATION_SECONDS))}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-center"
                 />
               </div>
